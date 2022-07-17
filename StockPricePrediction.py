@@ -8,6 +8,8 @@ import gc
 import os
 import re
 
+import time
+
 import numpy as np
 import pandas as pd
 np.random.seed(42)
@@ -28,63 +30,72 @@ from keras import callbacks
 
 
 class StockPricePrediction:
-    """Predict Future Stock Prices using Recurrent Neural Network with Long Short-Term Memory."""
-    
-    # Class Variables:
+    """
+    Predict Future Stock Prices using Recurrent Neural Network with Long Short-Term Memory.
+    Designed for Debugging Scenarios instead of Deployment Scenarios.
+    """
 
-    # HyperParameters: EPOCHS, BATCHSIZE, LOOKBACK
-    # Class Attributes(Manually Allocated): verbose, stockCode, scaler
-    # Class Attributes(Automatic Allocated): df, X_train, Y_train
-
-
-    def __init__(self, args, stockCode, LOOKBACK):
-        self.args = args
-
+    def __init__(self, stockCode: str,
+                       LOOKBACK: int,
+                       BATCH_SIZE: int,
+                       EPOCHS: int,
+                       verbose = False):
+        # Set Stock Code
         self.stockCode = stockCode
 
+        # Set Hyper Parameters
         self.LOOKBACK = LOOKBACK
+        self.BATCH_SIZE = BATCH_SIZE
+        self.EPOCHS = EPOCHS
 
+        # Initialize Data
         self.X_train = []
         self.Y_train = []
         self.X_test = []
         self.Y_test = []
 
+        # Config Utilities Variables
+        self.verbose = verbose
         self.model = None
         self.scaler = MinMaxScaler(feature_range = (0, 1))
+        self.localtime = time.strftime(r"%m-%d_%H%M" ,time.localtime(time.time()))
 
 
 
-    def loadStock(self, verbose = False):
-        self.df = pd.read_csv(r".StockDatasets/{}.csv".format(self.stockCode), index_col = "Date")
-        self.df.index = pd.DatetimeIndex(self.df.index)
+    def loadStock(self):
+        df = pd.read_csv(r".StockDatasets/{}.csv".format(self.stockCode), index_col = "Date")
+        df.index = pd.DatetimeIndex(self.df.index)
 
-        if verbose:
+        if self.verbose:
             pass
 
+        return df
 
-    def preprocessStock(self, verbose = False):
-        self.loadStock()
-
+    def clearStock(df: pd.DataFrame):
         # feature expansion: percent changes
-        self.df["Pct Change"] = self.df["Adj Close"].pct_change()
-        self.df["Pct Change"][np.isnan(self.df["Pct Change"])] = 0
+        df["Pct Change"] = df["Adj Close"].pct_change()
+        df["Pct Change"][np.isnan(df["Pct Change"])] = 0
 
         # delete unapplied columns
-        del self.df["Open"]
-        del self.df["High"]
-        del self.df["Low"]
-        del self.df["Close"]
-        del self.df["Volume"]
+        del df["Open"]
+        del df["High"]
+        del df["Low"]
+        del df["Close"]
+        del df["Volume"]
         gc.collect()
 
+        return df
+    
+    def splitTrainTest(df: pd.DataFrame):
+        train = df[:"2018"]    # 2011-1-1 ~ 2018-12-31
+        test = df[:"2018"]    # 2019-1-1 ~ 2021-12-31
 
-    def timestampStock(self, verbose = False):
-        # Train-Test Dataset Split
-        self.preprocessStock()
-        train = self.df[:"2018"]    # 2011-1-1 ~ 2018-12-31
+        return train, test
+
+    def timestampStock(self, train: pd.DataFrame,
+                             test: pd.DataFrame):
+
         trainBOUND = train.shape[0]
-
-        test = self.df[:"2018"]    # 2019-1-1 ~ 2021-12-31
         testBound = test.shape[0]
 
         # Apply Feature Scaling to Train Data
@@ -111,7 +122,7 @@ class StockPricePrediction:
         self.X_test = np.reshape(self.X_test, (self.X_test.shape[0], self.X_test.shape[1], 1))
 
 
-    def compileModel(self):
+    def activateModel(self):
         # Create model
         self.model = Sequential()
 
@@ -119,24 +130,24 @@ class StockPricePrediction:
         self.model.add(LSTM(
                        units = 64,
                        return_sequences = True,
-                       input_shape = (self.X_train.shape[1], 1)))
-        self.model.add(Dropout(0.25))
+                       input_shape = (self.X_train.shape[1], 1)),
+                       dropout = 0.1)
 
         # Hidden Layers
         self.model.add(LSTM(
                        units = 32,
-                       return_sequences = True))
-        self.model.add(Dropout(0.25))
+                       return_sequences = True),
+                       dropout = 0.1)
 
         self.model.add(LSTM(
                        units = 16,
-                       return_sequences = True))
-        self.model.add(Dropout(0.25))
+                       return_sequences = True),
+                       dropout = 0.1)
 
         self.model.add(LSTM(
                        units = 8,
-                       return_sequences = True))
-        self.model.add(Dropout(0.25))
+                       return_sequences = True),
+                       dropout = 0.1)
 
         # Output Layer
         self.model.add(Dense(units = 1))
@@ -158,15 +169,50 @@ class StockPricePrediction:
 
         # Train Model
         self.history = self.model.fit(self.X_train, self.Y_train,
-                                      batch_size= self.BATCHSIZE,
+                                      batch_size= self.BATCH_SIZE,
                                       epochs = self.EPOCHS,
                                       callbacks = [stop],
                                       validation_split = 0.2)
 
-        
-def predictStockPrice(self):
-    # Apply Feature Scaling to Test Data
-    self.X_test = self.scaler.transform(self.X_test)
+        # Save Model
+        self.model.save("./Models/{}-{}.tf".format(self.localtime,self.stockCode),
+                        save_format = "tf")
 
-    predicted_StockPrice = self.model.predict(self.X_test)
-    self.Y_pred = self.scaler.inverse_transform(predicted_StockPrice)
+        # Plot Accuracy & Loss
+        if self.verbose:
+            plt.figure()
+
+            for key in self.history.history.keys():
+                plt.plot(np.arange(0, self.EPOCHS) + 1,
+                                self.history.history[key],
+                                label = key)
+            
+            plt.suptitle("Training Loss & Accuracy - {}".format(self.stockCode))
+            plt.xlabel("Epoch")
+            plt.ylabel("Loss/Accuracy")
+            plt.legend(loc="lower left")
+
+            plt.savefig("./Plots/{}-{}-Loss_Accuracy.png".format(self.localtime,self.stockCode))
+        
+    def predictStockPrice(self):
+        # Apply Feature Scaling to Test Data
+        self.X_test = self.scaler.transform(self.X_test)
+
+        predicted_StockPrice = self.model.predict(self.X_test)
+        self.Y_pred = self.scaler.inverse_transform(predicted_StockPrice)
+
+        # Plot Predictions
+        if self.verbose:
+            plt.plot(self.Y_test, color = "red",
+                    label = "Real {} Stock Price".format(self.stockCode))
+
+            plt.plot(self.Y_pred, color = "blue",
+                    label = "Predicted {} Stock Price".format(self.stockCode))
+
+            plt.suptitle("{} Stock Price Prediction".format(self.stockCode))
+            plt.title("RMS Error: {}".format(np.square(self.Y_test - self.Y_pred).mean(axis = None)))
+            plt.xlabel("Dates")
+            plt.ylabel("Prices")
+            plt.legend(loc="lower left")
+
+            plt.savefig("./Plots/{}-{}-Loss_Accuracy.png".format(self.localtime,self.stockCode))
