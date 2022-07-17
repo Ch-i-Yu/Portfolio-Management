@@ -16,7 +16,6 @@ np.random.seed(42)
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 sns.color_palette("rocket_r", as_cmap=True)
 sns.set_style("white")
 
@@ -29,7 +28,7 @@ from keras.optimizers import rmsprop_v2
 from keras import callbacks
 
 
-class StockPricePrediction:
+class SPP:
     """
     Predict Future Stock Prices using Recurrent Neural Network with Long Short-Term Memory.
     Designed for Debugging Scenarios instead of Deployment Scenarios.
@@ -63,8 +62,8 @@ class StockPricePrediction:
 
 
     def loadStock(self):
-        df = pd.read_csv(r".StockDatasets/{}.csv".format(self.stockCode), index_col = "Date")
-        df.index = pd.DatetimeIndex(self.df.index)
+        df = pd.read_csv(r"./Stock-Datasets/{}.csv".format(self.stockCode), index_col = "Date")
+        df.index = pd.DatetimeIndex(df.index)
 
         if self.verbose:
             pass
@@ -72,10 +71,6 @@ class StockPricePrediction:
         return df
 
     def clearStock(df: pd.DataFrame):
-        # feature expansion: percent changes
-        df["Pct Change"] = df["Adj Close"].pct_change()
-        df["Pct Change"][np.isnan(df["Pct Change"])] = 0
-
         # delete unapplied columns
         del df["Open"]
         del df["High"]
@@ -86,41 +81,36 @@ class StockPricePrediction:
 
         return df
     
-    def splitTrainTest(df: pd.DataFrame):
+
+    def timestepStock(self, df: pd.Series):
+        # Split Train-Test Datasets
         train = df[:"2018"]    # 2011-1-1 ~ 2018-12-31
-        test = df[:"2018"]    # 2019-1-1 ~ 2021-12-31
-
-        return train, test
-
-    def timestampStock(self, train: pd.DataFrame,
-                             test: pd.DataFrame):
+        test = df["2019":]    # 2019-1-1 ~ 2021-12-31
 
         trainBOUND = train.shape[0]
         testBound = test.shape[0]
 
         # Apply Feature Scaling to Train Data
-        train_scaled = self.scaler.fit_transform(train)
-        del train
-        gc.collect()
+        train = self.scaler.fit_transform(train)
 
-        # Create Time Stamp
+        # Create Time Step
         for i in range(self.LOOKBACK, trainBOUND - 1):
-            self.X_train.append(train_scaled[i - self.LOOKBACK : i])
-            self.Y_train.append(train_scaled[i]["Adj Close"])
+            self.X_train.append(train[i - self.LOOKBACK : i])
+            self.Y_train.append(train[i])
 
         self.X_train = np.array(self.X_train)
         self.Y_train = np.array(self.Y_train)
 
-        for i in range(self.loadStock, testBound - 1):
-            self.X_test.append(test[i - self.LOOKBACK : i])
-            self.Y_test.append(test[i]["Adj Close"])
+        for i in range(self.LOOKBACK, testBound - 1):
+            self.X_test.append(test.iloc[i - self.LOOKBACK : i])
+            self.Y_test.append(test.iloc[i])
 
         self.X_test = np.array(self.X_test)
+        self.Y_test = np.array(self.Y_test)
 
         # Reshape Inputs
-        self.X_train = np.reshape(self.X_train, (self.X_train.shape[0], self.X_train.shape[1], 1))
-        self.X_test = np.reshape(self.X_test, (self.X_test.shape[0], self.X_test.shape[1], 1))
-
+        self.X_train = np.reshape(self.X_train, (-1, self.LOOKBACK))
+        self.Y_train = np.reshape(self.Y_train, (-1, 1))
 
     def activateModel(self):
         # Create model
@@ -128,36 +118,32 @@ class StockPricePrediction:
 
         # Input Layers
         self.model.add(LSTM(
-                       units = 64,
+                       units = 128,
                        return_sequences = True,
-                       input_shape = (self.X_train.shape[1], 1)),
-                       dropout = 0.1)
+                       input_shape = (self.LOOKBACK,    # num of timestamps
+                                      1),
+                       dropout = 0.1))
 
         # Hidden Layers
         self.model.add(LSTM(
+                       units = 64,
+                       return_sequences = True,
+                       dropout = 0.1))
+
+        self.model.add(LSTM(
                        units = 32,
-                       return_sequences = True),
-                       dropout = 0.1)
-
-        self.model.add(LSTM(
-                       units = 16,
-                       return_sequences = True),
-                       dropout = 0.1)
-
-        self.model.add(LSTM(
-                       units = 8,
-                       return_sequences = True),
-                       dropout = 0.1)
+                       return_sequences = False,
+                       dropout = 0.1))
 
         # Output Layer
         self.model.add(Dense(units = 1))
 
         # Set Optimizer
-        opt = rmsprop_v2.RMSprop(learning_rate = 10e-6)
+        opt = rmsprop_v2.RMSprop(learning_rate = 1e-4)
 
         # Set Callbacks: Early Stopping
         stop = callbacks.EarlyStopping(
-            min_delta = 10e-4,
+            min_delta = 10e-6,
             patience = 16,
             restore_best_weights = True
         )
@@ -175,28 +161,38 @@ class StockPricePrediction:
                                       validation_split = 0.2)
 
         # Save Model
-        self.model.save("./Models/{}-{}.tf".format(self.localtime,self.stockCode),
-                        save_format = "tf")
+        self.model.save("./Models/{}-{}.h5".format(self.localtime,self.stockCode),
+                        save_format = "h5")
 
         # Plot Accuracy & Loss
         if self.verbose:
             plt.figure()
 
-            for key in self.history.history.keys():
-                plt.plot(np.arange(0, self.EPOCHS) + 1,
-                                self.history.history[key],
-                                label = key)
+            length = len(self.history.history["mean_squared_error"])
+
+            plt.plot(np.arange(0, length) + 1,
+                               self.history.history["mean_squared_error"],
+                               label = "mean_squared_error")
+
+            plt.plot(np.arange(0, length) + 1,
+                               self.history.history["val_mean_squared_error"],
+                               label = "val_mean_squared_error")
             
             plt.suptitle("Training Loss & Accuracy - {}".format(self.stockCode))
             plt.xlabel("Epoch")
             plt.ylabel("Loss/Accuracy")
-            plt.legend(loc="lower left")
+            plt.legend(loc="upper right")
 
             plt.savefig("./Plots/{}-{}-Loss_Accuracy.png".format(self.localtime,self.stockCode))
         
     def predictStockPrice(self):
         # Apply Feature Scaling to Test Data
-        self.X_test = self.scaler.transform(self.X_test)
+        self.X_test = np.reshape(self.X_test, (-1, 1))
+        self.X_test = self.scaler.fit_transform(self.X_test)
+        self.X_test = np.reshape(self.X_test, (-1, self.LOOKBACK))
+        
+        # Reshape Inputs
+        self.Y_test = np.reshape(self.Y_test, (-1, 1))
 
         predicted_StockPrice = self.model.predict(self.X_test)
         self.Y_pred = self.scaler.inverse_transform(predicted_StockPrice)
@@ -213,6 +209,6 @@ class StockPricePrediction:
             plt.title("RMS Error: {}".format(np.square(self.Y_test - self.Y_pred).mean(axis = None)))
             plt.xlabel("Dates")
             plt.ylabel("Prices")
-            plt.legend(loc="lower left")
+            plt.legend(loc="upper left")
 
             plt.savefig("./Plots/{}-{}-Loss_Accuracy.png".format(self.localtime,self.stockCode))
