@@ -88,20 +88,20 @@ class SPP:
         test = df["2019":]    # 2019-1-1 ~ 2021-12-31
 
         trainBOUND = train.shape[0]
-        testBound = test.shape[0]
+        testBOUND = test.shape[0]
 
         # Apply Feature Scaling to Train Data
         train = self.scaler.fit_transform(train)
 
         # Create Time Step
-        for i in range(self.LOOKBACK, trainBOUND - 1):
+        for i in range(self.LOOKBACK, trainBOUND):
             self.X_train.append(train[i - self.LOOKBACK : i])
             self.Y_train.append(train[i])
 
         self.X_train = np.array(self.X_train)
         self.Y_train = np.array(self.Y_train)
 
-        for i in range(self.LOOKBACK, testBound - 1):
+        for i in range(self.LOOKBACK, testBOUND):
             self.X_test.append(test.iloc[i - self.LOOKBACK : i])
             self.Y_test.append(test.iloc[i])
 
@@ -161,7 +161,7 @@ class SPP:
                                       validation_split = 0.2)
 
         # Save Model
-        self.model.save("./Models/{}-{}.h5".format(self.localtime,self.stockCode),
+        self.model.save("./Models/{}.h5".format(self.stockCode),
                         save_format = "h5")
 
         # Plot Accuracy & Loss
@@ -183,7 +183,7 @@ class SPP:
             plt.ylabel("Loss/Accuracy")
             plt.legend(loc="upper right")
 
-            plt.savefig("./Plots/{}-{}-Loss_Accuracy.png".format(self.localtime,self.stockCode))
+            plt.savefig("./Plots/{}-Loss_Accuracy.png".format(self.stockCode))
         
     def predictStockPrice(self):
         # Apply Feature Scaling to Test Data
@@ -211,4 +211,26 @@ class SPP:
             plt.ylabel("Prices")
             plt.legend(loc="upper left")
 
-            plt.savefig("./Plots/{}-{}-Loss_Accuracy.png".format(self.localtime,self.stockCode))
+            plt.savefig("./Plots/{}-Prediction_Evaluation.png".format(self.stockCode))
+
+    def saveCSV(self):
+        df = self.loadStock()
+        df = df["2019":]
+
+        pred_adj_close = self.Y_pred.ravel()
+        for i in range(0, self.LOOKBACK):
+            pred_adj_close = np.append(0, pred_adj_close)
+        
+        df = df.assign(Predicted_Adj_Close = pred_adj_close.ravel())
+
+        # delete unapplied columns
+        del df["Open"]
+        del df["High"]
+        del df["Low"]
+        del df["Close"]
+        del df["Volume"]
+        gc.collect()
+
+        df.to_csv("./Predictions/{}_prediction.csv".format(self.stockCode))
+
+
