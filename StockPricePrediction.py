@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+
+# @Date     : 2022/06/01
+# @Author   : Ch'i YU
+
 # import necessary dependencies
 
 from warnings import simplefilter
