@@ -52,6 +52,49 @@ def main():
     # set page header
     st.header("Ka-Ching: Visualize your AI-Supported Portfolio!")
 
+    # set github badge series
+    st.markdown(
+        f"""
+        [gh]: https://github.com/Ch-i-Yu/Portfolio-Management
+        ![GitHub Repo stars](https://img.shields.io/github/stars/Ch-i-YU/Portfolio-Management?style=social)
+        ![GitHub Repo forks](https://img.shields.io/github/forks/Ch-i-YU/Portfolio-Management?style=social)
+        """
+    )
+
+    # set page slogan
+    st.markdown(
+        """
+        > *Powered by **LSTM**, Visualized with **plotly**;* 
+        > *Deployed on **Streamlit Cloud**, All Designed just for **YOU**:sparkling_heart:.*
+        """
+    )
+
+    # set page about / userguide info
+    tab_about, tab_plotlytricks, tab_userguide = st.tabs(["About", "Plotly Tricks", "User Guide"])
+    with tab_about:
+        st.markdown(
+            """
+            About Content: Hot Work in Progress!
+            """
+        )
+    with tab_plotlytricks:
+        st.markdown(
+            """
+            - Double Click on legends to isolate a trace;
+            - Single Click on legends to remove a trace;
+            - Repeat your clicks to undo your operations;
+            """
+        )
+    with tab_userguide:
+        st.markdown(
+            """
+            1. Config your portfolio in the **`sidebar`**;
+            2. Press the **`button`** below in the **`sidebar`** to start;
+            
+            Please double check the validity of your portfolio configurations if the **`button`** is disabled.
+            """
+        )
+
     # config global variables
     stock_option = ["AAPL", "AMZN", "BRK-B", "GOOG", "JNJ", "JPM",
                     "MSFT", "NVDA", "PG", "TSLA", "V", "WMT", "XOM"]
@@ -63,30 +106,8 @@ def main():
         download_file(fileName)
     DOWNLOAD_TEXT.empty()
 
-    # render the badges
-    st.markdown(
-        f"""
-        [gh]: https://github.com/epogrebnyak/ssg-dataset
-        [![GitHub Repo stars](https://img.shields.io/github/stars/epogrebnyak/ssg-dataset?style=social)][gh]
-        """
-    )
 
-    # render the welcome text
-    st.markdown("""
-        ## Welcome to use Ka-Ching!
-        TBC. *Hot Work in Progress!*
-    """)
-
-    # render the user guide
-    with st.expander("User Guide:"):
-        st.write("""
-            1. Config your portfolio in the **`sidebar`**;
-            2. Press the **`button`** below in the **`sidebar`** to start;
-            
-            Please double check the validity of your portfolio configurations if the **`button`** is disabled.
-        """)
-
-    # render the plotly plots: line chart
+    # render the global plotly plots: line chart of 2018 past stock prices
     traces = []
     for stockCode in stock_option:
         df = load_csv(stockCode + ".csv")
@@ -102,9 +123,6 @@ def main():
                   yaxis = dict(title = "Price in USD"))
     fig = go.Figure(data = traces, layout = layout)
     st.plotly_chart(fig, use_container_width = True)
-
-    # sample usage: render the plotly plots: candlestick chart
-    st_candlestichart("GOOG")
 
     # render sidebar
     st.sidebar.subheader("Configure Your Portfolio:")
@@ -149,13 +167,31 @@ def main():
         max_value = 35
     )
 
+    # invoke service
     if st.sidebar.button(
         "Click to Start Portfolio Management!",
-         disabled = invoke_session_state):
-         portfolio_management(stock_selection,
+        disabled = invoke_session_state):
+        portfolio_management(stock_selection,
                               risk_selection,
                               datestart_selection,
                               daterange_selection)
+        expander_1 = st.expander("Predicted Stock Prices:")
+        expander_1.write(
+            """
+            TBC. See your Predicted Stock Prices Here(Check if it's permanent)
+            """
+        )
+
+        expander_2 = st.expander("Portfolio Management Outcomes:")
+        expander_2.write(
+            """
+            TBC. See your Portfolio Managements Here(Check if it's clearred after invokes)
+            """
+        )
+                
+
+    # sample usage: render the plotly plots: candlestick chart
+    # st_candlestichart("GOOG")
 
 def portfolio_management(stock_selection,
                          risk_selection,
