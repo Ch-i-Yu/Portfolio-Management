@@ -25,11 +25,16 @@ import datetime
 import pandas as pd
 import numpy as np
 
+from keras import models
+
 from plotly import graph_objs as go
 from plotly.figure_factory import create_candlestick
 from plotly.graph_objects import Line, Marker
 
 
+
+# ______________________________________________________________________________________________________________________
+# main page
 
 def main():
     """
@@ -155,6 +160,14 @@ def portfolio_management(stock_selection,
                          risk_selection,
                          datestart_selection,
                          daterange_selection):
+    # initialize resources
+    stockList = {}
+    modelList = {}
+    for stockCode in stock_selection:
+        stockList[stockCode] = load_csv(stockCode + ".csv")
+        modelList[stockCode] = models.load_model("Models" + "/" + stockCode + ".h5")
+
+    # _________________________________________________________________ #
     text = st.markdown("The Invoked Function is Running for 15 seconds.")
     info1 = st.markdown(stock_selection)
     info2 = st.markdown(risk_selection)
@@ -167,6 +180,10 @@ def portfolio_management(stock_selection,
     info3.empty()
     info4.empty()
     return
+
+
+# ______________________________________________________________________________________________________________________
+# chart render support
 
 def st_candlestichart(stockCode):
     df = load_csv(stockCode + ".csv")
@@ -192,6 +209,8 @@ def st_candlestichart(stockCode):
 
     return
 
+# ______________________________________________________________________________________________________________________
+# file resource supports
 
 def load_csv(fileName):
     """
@@ -272,7 +291,14 @@ def load_file_content_as_string(path):
     return response.read().decode("utf-8")
 
 # ______________________________________________________________________________________________________________________
-# global variables: external files to download
+# analysis support
+
+
+
+
+
+# ______________________________________________________________________________________________________________________
+# file resource external files to download
 EXTERNAL_DEPENDENCIES = {
     # Stock Datasets
     "AAPL.csv": {
