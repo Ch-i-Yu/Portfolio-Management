@@ -18,14 +18,18 @@ class PortfolioManagement:
 
     # 返回值为一个长度为period的列表。列表中顺序记录了每一天的优化组合投资策略。
     # 列表中每个元素包含：期望的月均回报率return 变化率（风险）Volatility 以及用户输入的各个股票的投资权重
+
+    # predicted输入格式：一个字典。键为AAPL GOOG等字符串 List的长度和period相同。
     def Optimize(self, predicted):
         datas = {}
         count_out = self.period
 
         ret_portfolios = []  #返回值
         for equity in self.equities:
-            file_relative = equity+".csv"
+            # 相对路径 基于Github文件层次设计
+            file_relative = "./Stock-Dataset/" + equity +".csv"
             result_csv = pd.read_csv(file_relative, header=None)
+            result_csv = result_csv.drop([1, 2, 3, 4, 6], axis=1)
             datas[equity] = result_csv
 
         time_offset = 0
@@ -36,35 +40,43 @@ class PortfolioManagement:
                     df = datas[equity]
                     newdata = pd.DataFrame(columns=None);
                     count = 0
+                    record = 0
                     for i in df[0]:
                         if i == self.start:
                             break
+                        elif i == "2019-01-02":
+                            record = count
+                            count += 1
                         else:
                             count += 1
-                    insert = df[0:count + time_offset + 1]
+                    insert = df[record:count + time_offset + 1]
                     df_new = newdata.append(insert)
 
                     #把当天的预测值赋给df
-                    df_new.loc[count+time_offset, 1] = predicted[time_offset][equity][0]
-                    df_new.rename(columns={1: equity}, inplace=True)
+                    df_new.loc[count + time_offset, 5] = predicted[equity][time_offset]
+                    df_new.rename(columns={5: equity}, inplace=True)
                     is_first = False
 
                 else:
                     df_copy = datas[equity]
                     newdata_copy = pd.DataFrame(columns=None);
                     count = 0
+                    record = 0
                     for i in df_copy[0]:
                         if i == self.start:
                             break
+                        elif i == "2019-01-02":
+                            record = count
+                            count += 1
                         else:
                             count += 1
-                    insert = df_copy[0:count + time_offset + 1]
+                    insert = df_copy[record:count + time_offset + 1]
                     df_new_copy = newdata_copy.append(insert)
 
                     # 把当天的预测值赋给df，然后删除预测列
-                    df_new_copy.loc[count + time_offset, 1] = predicted[time_offset][equity][0]
+                    df_new_copy.loc[count + time_offset, 5] = predicted[equity][time_offset]
                     df_new_copy = df_new_copy.drop([0], axis=1)
-                    df_new_copy.rename(columns={1: equity}, inplace=True)
+                    df_new_copy.rename(columns={5: equity}, inplace=True)
 
                     #将新的股票列添加进来
                     columns = df_new.columns.tolist()
@@ -72,7 +84,7 @@ class PortfolioManagement:
                     df_new = df_new.reindex(columns=columns)
                     df_new[equity] = df_new_copy
 
-            df_new = df_new.drop([0])
+           # df_new = df_new.drop([0])
             symbols = []
             for equity in self.equities:
                 symbols.append(equity)
@@ -131,6 +143,5 @@ class PortfolioManagement:
             time_offset += 1
 
         return ret_portfolios
-
 
 
