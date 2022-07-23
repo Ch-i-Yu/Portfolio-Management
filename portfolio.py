@@ -1,7 +1,14 @@
+# -*- coding: utf-8 -*-
+
+# @Date:        2022/07/23
+# @Author:      Ashley-Willkes
+# @Last Edited: 2022/07/23 11:17
+
 import numpy as np
 import pandas as pd
 # from pandas_datareader import data
 #import matplotlib.pyplot as plt
+
 
 
 class PortfolioManagement:
