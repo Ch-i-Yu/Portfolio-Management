@@ -1,5 +1,3 @@
-
-
 # portfolios: 元素为dataframe的列表，dataframe中包含期望的月均回报率return 变化率（风险）Volatility 以及用户输入的各个股票的投资权重
 # equities:股票名，至少两种 str
 # start:起始时间 str
@@ -10,6 +8,12 @@ def pastPaperTrading(period, start, equities, portfolios):
     count_loop = period
     datas = {}
     profits = []
+
+    df_profit = pd.DataFrame(columns=['Date', 'Daily Profit'])
+    df_forDrawing = pd.DataFrame(columns=['Date', 'Profit by Stock', 'Stock Code'])
+
+    count_profit = 0
+    count_drawing = 0
 
     for equity in equities:
         file_relative = "./Stock-Dataset/" + equity +".csv"
@@ -77,7 +81,14 @@ def pastPaperTrading(period, start, equities, portfolios):
         tomorrow_price = {}
         destination_count = 0
 
+        dates = []
+        # 生成日期列表
+        list = df_new.reset_index()['Date']
+        date = list[destination[destination_count] - record + time_offset]
+        dates.append(date)
+
         for equity in equities:
+
             today = df_new[equity][destination[destination_count]+time_offset]
             tomorrow = df_new[equity][destination[destination_count] +time_offset + 1]
             today_price[equity] = today
@@ -89,14 +100,23 @@ def pastPaperTrading(period, start, equities, portfolios):
 
         for equity in equities:
             i = equity+"weight"
-            profit += priciple * portfolios[time_offset][i] * (float(tomorrow_price[equity]) - float(today_price[equity]))
+            profit_for_equity = priciple * portfolios[time_offset][i] * (float(tomorrow_price[equity]) - float(today_price[equity]))
+            profit += profit_for_equity
 
-        profits.append(profit)
+            # 按日期 具体股票种类及该股票当日盈利为单位新建dataframe行
+            df_forDrawing.loc[count_drawing] = [date, profit_for_equity, equity]
+            count_drawing += 1
+
+        df_profit.loc[count_profit] = [date, profit]
+        count_profit += 1
+
+        # profits.append(profit)
+        df_tuple = (df_profit, df_forDrawing)
 
         time_offset += 1
         count_loop -= 1
 
-    return profits
+    return df_tuple
 
 
 
