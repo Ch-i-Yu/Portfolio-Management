@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# @Date:        2022/07/23
+# @Date:        2022/07/25
 # @Author:      Ashley-Willkes
-# @Last Edited: 2022/07/23 11:17
+# @Last Edited: 2022/07/25 00:51
 
 import numpy as np
 import pandas as pd
@@ -33,7 +33,7 @@ class PortfolioManagement:
 
         ret_portfolios = []  #返回值
         for equity in self.equities:
-            file_relative = "./Stock-Dataset/" + equity +".csv"
+            file_relative = "./Stock-Datasets/" + equity +".csv"
             result_csv = pd.read_csv(file_relative)
             result_csv = result_csv.drop(["Open", "High", "Low" , "Close" , "Volume"], axis=1)
             datas[equity] = result_csv
@@ -149,4 +149,3 @@ class PortfolioManagement:
             time_offset += 1
 
         return ret_portfolios
-
