@@ -19,6 +19,8 @@ Anyway I'm going to name this website after "Ka-Ching!"
 import streamlit as st
 
 import os
+import re
+import gc
 import urllib
 import time
 import datetime
@@ -32,7 +34,7 @@ from plotly import graph_objs as go
 from plotly.figure_factory import create_candlestick
 from plotly.graph_objects import Line, Marker
 
-
+from sklearn.preprocessing import MinMaxScaler
 
 # ______________________________________________________________________________________________________________________
 # main page
@@ -52,10 +54,54 @@ def main():
     # set page header
     st.header("Ka-Ching: Visualize your AI-Supported Portfolio!")
 
+    # set github badge series
+    st.markdown(
+        f"""
+        [gh]: https://github.com/Ch-i-Yu/Portfolio-Management
+        ![GitHub Repo stars](https://img.shields.io/github/stars/Ch-i-YU/Portfolio-Management?style=social)
+        ![GitHub Repo forks](https://img.shields.io/github/forks/Ch-i-YU/Portfolio-Management?style=social)
+        """
+    )
+
+    # set page slogan
+    st.markdown(
+        """
+        > *Powered by **LSTM**, Visualized with **plotly**;* 
+        > *Deployed on **Streamlit Cloud**, All Designed just for **YOU**:sparkling_heart:.*
+        """
+    )
+
+    # set page about / userguide info
+    tab_about, tab_plotlytricks, tab_userguide = st.tabs(["About", "Plotly Tricks", "User Guide"])
+    with tab_about:
+        st.markdown(
+            """
+            About Content: Hot Work in Progress!
+            """
+        )
+    with tab_plotlytricks:
+        st.markdown(
+            """
+            - Double Click on legends to isolate a trace;
+            - Single Click on legends to remove a trace;
+            - Repeat your clicks to undo your operations;
+            """
+        )
+    with tab_userguide:
+        st.markdown(
+            """
+            1. Config your portfolio in the **`sidebar`**;
+            2. Press the **`button`** below in the **`sidebar`** to start;
+            
+            Please double check the validity of your portfolio configurations if the **`button`** is disabled.
+            """
+        )
+
     # config global variables
     stock_option = ["AAPL", "AMZN", "BRK-B", "GOOG", "JNJ", "JPM",
                     "MSFT", "NVDA", "PG", "TSLA", "V", "WMT", "XOM"]
     risk_option = ["Optimal Risky", "Minimum Volatility"]
+    available_dates = load_csv("TradeDays.csv")
 
     # download necessary dependencies
     DOWNLOAD_TEXT = st.markdown("### Loading...Please wait")
@@ -63,30 +109,8 @@ def main():
         download_file(fileName)
     DOWNLOAD_TEXT.empty()
 
-    # render the badges
-    st.markdown(
-        f"""
-        [gh]: https://github.com/epogrebnyak/ssg-dataset
-        [![GitHub Repo stars](https://img.shields.io/github/stars/epogrebnyak/ssg-dataset?style=social)][gh]
-        """
-    )
 
-    # render the welcome text
-    st.markdown("""
-        ## Welcome to use Ka-Ching!
-        TBC. *Hot Work in Progress!*
-    """)
-
-    # render the user guide
-    with st.expander("User Guide:"):
-        st.write("""
-            1. Config your portfolio in the **`sidebar`**;
-            2. Press the **`button`** below in the **`sidebar`** to start;
-            
-            Please double check the validity of your portfolio configurations if the **`button`** is disabled.
-        """)
-
-    # render the plotly plots: line chart
+    # render the global plotly plots: line chart of 2018 past stock prices
     traces = []
     for stockCode in stock_option:
         df = load_csv(stockCode + ".csv")
@@ -102,9 +126,6 @@ def main():
                   yaxis = dict(title = "Price in USD"))
     fig = go.Figure(data = traces, layout = layout)
     st.plotly_chart(fig, use_container_width = True)
-
-    # sample usage: render the plotly plots: candlestick chart
-    st_candlestichart("GOOG")
 
     # render sidebar
     st.sidebar.subheader("Configure Your Portfolio:")
@@ -135,11 +156,15 @@ def main():
 
     datestart_selection = st.sidebar.date_input(
         "Select a Date to Start Portofolio Management",
-        value = datetime.date(2020, 1, 1),
+        value = datetime.date(2021, 1, 8),
         min_value = datetime.date(2019, 1, 1),
         max_value = datetime.date(2021, 12, 31),
         disabled = input_session_state
     )
+
+    if not date_ValidCheck(datestart_selection, available_dates):
+        st.sidebar.info("Oops! Seems that the selected date is NOT a trade day. Please try another day.")
+        invoke_session_state = True
     
     daterange_selection = st.sidebar.slider(
         "Select a Date Range(by Days) to Perform Portfolio Management",
@@ -149,26 +174,43 @@ def main():
         max_value = 35
     )
 
+    # invoke service
     if st.sidebar.button(
         "Click to Start Portfolio Management!",
-         disabled = invoke_session_state):
-         portfolio_management(stock_selection,
-                              risk_selection,
-                              datestart_selection,
-                              daterange_selection)
+        disabled = invoke_session_state):
+        # ______________________________________________________________ #
+        # 1. predict stock prices:
+        df_predictions, dict_predictions = predict_stockPrice(stock_selection, datestart_selection, daterange_selection)
+        prediction_candlestichart(df_predictions, stock_selection)
+
+        # ______________________________________________________________ #
+        # 2. analyze portfolio management:
+
+        # 在这里调用代码，返回值就 xx, yy = blahblah()
+        # 写好了叫我来画图
+
+
+        expander_2 = st.expander("Portfolio Management Outcomes:")
+        expander_2.write(
+            """
+            TBC. See your Portfolio Managements Here(Check if it's clearred after invokes)
+            """
+        )
+                
+
+    # sample usage: render the plotly plots: candlestick chart
+    # st_candlestichart("GOOG")
 
 def portfolio_management(stock_selection,
                          risk_selection,
                          datestart_selection,
                          daterange_selection):
-    # initialize resources
-    stockList = {}
-    modelList = {}
-    for stockCode in stock_selection:
-        stockList[stockCode] = load_csv(stockCode + ".csv")
-        modelList[stockCode] = models.load_model("Models" + "/" + stockCode + ".h5")
+    # _________________________________________________________________ #
+    # analyzes data
 
     # _________________________________________________________________ #
+    # render website elements
+
     text = st.markdown("The Invoked Function is Running for 15 seconds.")
     info1 = st.markdown(stock_selection)
     info2 = st.markdown(risk_selection)
@@ -186,29 +228,63 @@ def portfolio_management(stock_selection,
 # ______________________________________________________________________________________________________________________
 # chart render support
 
-def st_candlestichart(stockCode):
-    df = load_csv(stockCode + ".csv")
-    df = df[(df["Date"] >= "2018") & (df["Date"] < "2019")]
-    fig = go.Figure(
-        data = go.Candlestick(
-            x = pd.to_datetime(df["Date"]),
-            open = df["Open"],
-            high = df["High"],
-            low = df["Low"],
-            close = df["Close"],
-            increasing_line_color = "green",
-            decreasing_line_color = "red"
-        ),
-        layout = dict(
-            title = "{} Stock Price in Candlestick Chart".format(stockCode),
-            xaxis = dict(title = "Date"),
-            yaxis = dict(title = "Price in USD")
-        )
-    )
-    with st.expander("{} Stock Prices:".format(stockCode)):
-        st.plotly_chart(fig, use_container_width = True)
+def prediction_candlestichart(df_predictions, stock_selection):
+    with st.expander("Predicted Stock Prices:"):
+        for stockCode in stock_selection:
+            df = df_predictions[stockCode]
+
+            trace1 = go.Scatter(x = pd.to_datetime(df["Date"]),
+                            y = df["Adj Close"],
+                            mode = "lines+markers",
+                            marker = dict(color = "rgba(245, 210, 40, 0.8)"),
+                            name = "Actual Adj Close")
+
+            trace2 = go.Scatter(x = pd.to_datetime(df["Date"]),
+                            y = df["Predicted_Adj_Close"],
+                            mode = "lines+markers",
+                            marker = dict(color = "rgba(40, 115, 240, 0.8)"),
+                            name = "Predicted Adj Close")
+
+            trace3 = go.Candlestick(
+                    x = pd.to_datetime(df["Date"]),
+                    open = df["Open"],
+                    high = df["High"],
+                    low = df["Low"],
+                    close = df["Close"],
+                    increasing_line_color = "green",
+                    decreasing_line_color = "red",
+                    name = "Stock Price",
+                ),
+
+            fig = go.Figure(
+                data = trace3,
+                layout = dict(
+                title = "{} Stock Price in Candlestick Chart".format(stockCode),
+                xaxis = dict(title = "Date"),
+                yaxis = dict(title = "Price in USD")
+                )
+            )
+
+            fig.add_trace(trace1)
+            fig.add_trace(trace2)
+
+            st.plotly_chart(fig, use_container_width = True)
 
     return
+
+
+# ______________________________________________________________________________________________________________________
+# validity check supports
+def date_ValidCheck(datestart_selection: datetime.date,
+                    df: pd.DataFrame):
+    datestart = datestart_selection.strftime(r"%Y-%m-%d")
+    df = load_csv("AAPL.csv")
+    index = df[df["Date"].isin([datestart])].index
+
+    if np.size(index) == 0:
+        return False
+    else:
+        return True
 
 # ______________________________________________________________________________________________________________________
 # file resource supports
@@ -293,9 +369,45 @@ def load_file_content_as_string(path):
 
 # ______________________________________________________________________________________________________________________
 # analysis support
+def predict_stockPrice(stock_selection: str,
+                       datestart_selection: datetime.date,
+                       daterange_selection: int):
+    # initialize return values
+    df_predictions = {}
+    dict_predictions = {}
+    
+    for stockCode in stock_selection:
+        df = load_csv(stockCode + ".csv")
+        del df["Volume"]
+        gc.collect()
+        model = models.load_model(EXTERNAL_DEPENDENCIES[stockCode + ".h5"]["directory"] + r"/" + stockCode + ".h5")
 
+        datestart = datestart_selection.strftime(r"%Y-%m-%d")
 
+        date_index_base = df[df["Date"].isin([datestart])].index.values[0]
+        df_base = df[(date_index_base - (daterange_selection - 1)) : (date_index_base + 1)]
+        list_predictions = []
 
+        for i in range(daterange_selection):
+            index_prev = date_index_base - (daterange_selection - 1) + i
+            index_post = date_index_base + 1 + i
+            timestamp = np.array(df["Adj Close"][index_prev : index_post]).reshape(daterange_selection, 1)
+
+            # Apply Feature Scaling to Test Data
+            scaler = MinMaxScaler(feature_range = (0, 1))
+            timestamp = np.reshape(timestamp, (-1, 1))
+            timestamp = scaler.fit_transform(timestamp)
+            timestamp = np.reshape(timestamp, (-1, daterange_selection))
+            
+            # Reshape Outputs
+            pred = model.predict(timestamp)
+            pred = scaler.inverse_transform(pred).tolist()
+            list_predictions.append(pred[0][0])
+
+        dict_predictions[stockCode] = list_predictions
+        df_predictions[stockCode] = df_base.assign(Predicted_Adj_Close = list_predictions)
+
+    return df_predictions, dict_predictions
 
 
 # ______________________________________________________________________________________________________________________
@@ -409,6 +521,11 @@ EXTERNAL_DEPENDENCIES = {
         "directory": "Models"
     },
 
+    # Helper Resources
+    "TradeDays.csv": {
+        "url": "https://raw.githubusercontent.com/Ch-i-Yu/Portfolio-Management/main/TradeDays.csv",
+        "directory": "Helper-Resources"
+    },
 }
 
 
