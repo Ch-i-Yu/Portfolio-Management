@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# @Date:        2022/07/23
+# @Date:        2022/07/25
 # @Author:      Ashley-Willkes
-# @Last Edited: 2022/07/23 11:17
+# @Last Edited: 2022/07/25 00:54
 
 # portfolios: 元素为dataframe的列表，dataframe中包含期望的月均回报率return 变化率（风险）Volatility 以及用户输入的各个股票的投资权重
 # equities:股票名，至少两种 str
@@ -13,6 +13,7 @@
 def pastPaperTrading(period, start, equities, portfolios):
     count_loop = period
     datas = {}
+    start_now = start.strftime('%Y-%m-%d')
     profits = []
 
     df_profit = pd.DataFrame(columns=['Date', 'Daily Profit'])
@@ -22,7 +23,8 @@ def pastPaperTrading(period, start, equities, portfolios):
     count_drawing = 0
 
     for equity in equities:
-        file_relative = "./Stock-Dataset/" + equity +".csv"
+        # 有点小问题 忘记+s
+        file_relative = equity + ".csv"
         result_csv = load_csv(file_relative)
         # result_csv = pd.read_csv(file_relative)
         result_csv = result_csv.drop(["Open", "High", "Low" , "Close" , "Volume"], axis=1)
@@ -31,6 +33,9 @@ def pastPaperTrading(period, start, equities, portfolios):
     time_offset = 0
 
     while count_loop > 0:
+        # 打印循环次数
+        # st.markdown("Loop: ")
+        # st.markdown(count_loop)
         is_first = True
         destination = []
         for equity in equities:
@@ -40,7 +45,7 @@ def pastPaperTrading(period, start, equities, portfolios):
                 count = 0
                 record = 0
                 for i in df["Date"]:
-                    if i == start:
+                    if i == start_now:
                         break
                     elif i == "2019-01-02":
                         record = count
@@ -61,13 +66,16 @@ def pastPaperTrading(period, start, equities, portfolios):
                 newdata_copy = pd.DataFrame(columns=None);
                 count = 0
                 record = 0
+
                 for i in df_copy["Date"]:
-                    if i == start:
+                    if i == start_now:
+                        # st.markdown("Match!")
                         break
                     elif i == "2019-01-02":
                         record = count
                         count += 1
                     else:
+
                         count += 1
                 destination.append(count)
                 insert = df_copy[record:count + time_offset + 2]
@@ -89,8 +97,11 @@ def pastPaperTrading(period, start, equities, portfolios):
 
         dates = []
         # 生成日期列表
-        list = df_new.reset_index()['Date']
-        date = list[destination[destination_count] - record + time_offset]
+        date_list = df_new.reset_index()['Date']
+        time.sleep(15)
+        # date = date_list[destination[destination_count] - record + time_offset]
+        date = date_list[count - record + time_offset]
+
         dates.append(date)
 
         for equity in equities:
@@ -121,9 +132,9 @@ def pastPaperTrading(period, start, equities, portfolios):
 
         time_offset += 1
         count_loop -= 1
-
+    # 打印完成记录
+    # st.markdown("Done!")
     return df_tuple
-
 
 
 
