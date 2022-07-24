@@ -1,23 +1,20 @@
 # -*- coding: utf-8 -*-
 
-# @Date:        2022/06/01
-# @Author:      Ch'i YU
-# @Last Edited: 2022/07/22 18:00
+# @Date:        2022/07/25
+# @Author:      Ch'i YU     Ashley Willkes
+# @Last Edited: 2022/07/25 00:47
 # @Project Contribution: TBC
 
 """
 Some Text Here
-
 The goal of this project is to ...
-
 Anyway I'm going to name this website after "Ka-Ching!"
-
 """
 
 # import necessary dependencies
 
 import streamlit as st
-
+import tensorflow
 import os
 import re
 import gc
@@ -36,6 +33,8 @@ from plotly.graph_objects import Line, Marker
 
 from sklearn.preprocessing import MinMaxScaler
 
+import portfolio
+
 # ______________________________________________________________________________________________________________________
 # main page
 
@@ -46,10 +45,10 @@ def main():
 
     # set page title / layout / sidebar
     st.set_page_config(
-        page_title = "Ka-Ching: Visualize your AI-Supported Portfolio!",
-        page_icon = ":bar_chart:",
-        initial_sidebar_state = "expanded",
-        layout = "wide")
+        page_title="Ka-Ching: Visualize your AI-Supported Portfolio!",
+        page_icon=":bar_chart:",
+        initial_sidebar_state="expanded",
+        layout="wide")
 
     # set page header
     st.header("Ka-Ching: Visualize your AI-Supported Portfolio!")
@@ -92,7 +91,7 @@ def main():
             """
             1. Config your portfolio in the **`sidebar`**;
             2. Press the **`button`** below in the **`sidebar`** to start;
-            
+
             Please double check the validity of your portfolio configurations if the **`button`** is disabled.
             """
         )
@@ -109,35 +108,34 @@ def main():
         download_file(fileName)
     DOWNLOAD_TEXT.empty()
 
-
     # render the global plotly plots: line chart of 2018 past stock prices
     traces = []
     for stockCode in stock_option:
         df = load_csv(stockCode + ".csv")
         df = df[(df["Date"] >= "2018") & (df["Date"] < "2019")]
         traces.append(go.Scatter(
-            x = df["Date"],
-            y = df["Adj Close"],
-            mode = "lines",
-            name = stockCode,
+            x=df["Date"],
+            y=df["Adj Close"],
+            mode="lines",
+            name=stockCode,
         ))
-    layout = dict(title = "Historical Stock Prices(Adjusted Close) of Topmost Famous US Stocks During 2018",
-                  xaxis = dict(title = "Dates"),
-                  yaxis = dict(title = "Price in USD"))
-    fig = go.Figure(data = traces, layout = layout)
-    st.plotly_chart(fig, use_container_width = True)
+    layout = dict(title="Historical Stock Prices(Adjusted Close) of Topmost Famous US Stocks During 2018",
+                  xaxis=dict(title="Dates"),
+                  yaxis=dict(title="Price in USD"))
+    fig = go.Figure(data=traces, layout=layout)
+    st.plotly_chart(fig, use_container_width=True)
 
     # render sidebar
     st.sidebar.subheader("Configure Your Portfolio:")
-    
+
     input_session_state = False
     invoke_session_state = False
 
     stock_selection = st.sidebar.multiselect(
         "Select Stocks to Analysis",
-        options = stock_option,
-        default = stock_option[0:5],
-        disabled = input_session_state
+        options=stock_option,
+        default=stock_option[0:5],
+        disabled=input_session_state
     )
     if (len(stock_selection)) == 0:
         st.sidebar.warning("Cannot Start Portfolio Management with No Available Stocks.")
@@ -150,34 +148,34 @@ def main():
 
     risk_selection = st.sidebar.radio(
         "Select Preference for Risk Tolerance",
-        options = risk_option,
-        disabled = input_session_state
+        options=risk_option,
+        disabled=input_session_state
     )
 
     datestart_selection = st.sidebar.date_input(
         "Select a Date to Start Portofolio Management",
-        value = datetime.date(2021, 1, 8),
-        min_value = datetime.date(2019, 1, 1),
-        max_value = datetime.date(2021, 12, 31),
-        disabled = input_session_state
+        value=datetime.date(2021, 1, 8),
+        min_value=datetime.date(2019, 1, 1),
+        max_value=datetime.date(2021, 12, 31),
+        disabled=input_session_state
     )
 
     if not date_ValidCheck(datestart_selection, available_dates):
         st.sidebar.info("Oops! Seems that the selected date is NOT a trade day. Please try another day.")
         invoke_session_state = True
-    
+
     daterange_selection = st.sidebar.slider(
         "Select a Date Range(by Days) to Perform Portfolio Management",
-        min_value = 7,
-        value = 14,
-        step = 7,
-        max_value = 35
+        min_value=7,
+        value=14,
+        step=7,
+        max_value=35
     )
 
     # invoke service
     if st.sidebar.button(
-        "Click to Start Portfolio Management!",
-        disabled = invoke_session_state):
+            "Click to Start Portfolio Management!",
+            disabled=invoke_session_state):
         # ______________________________________________________________ #
         # 1. predict stock prices:
         df_predictions, dict_predictions = predict_stockPrice(stock_selection, datestart_selection, daterange_selection)
@@ -186,9 +184,21 @@ def main():
         # ______________________________________________________________ #
         # 2. analyze portfolio management:
 
+        # Portfolio的返回值
+        pf_ret = portfolio_management(stock_selection=stock_selection , risk_selection= risk_selection,
+                                  datestart_selection = datestart_selection,
+                                  daterange_selection = daterange_selection,
+                                  dict_predictions=dict_predictions)
+        # print(pf_ret)
+        # PastPaperTrading的返回值
+        ppt_ret = pastPaperTrading(period=daterange_selection,
+                                   start=datestart_selection,
+                                   equities=stock_selection,
+                                   portfolios=pf_ret)
+        # print(ppt_ret)
+
         # 在这里调用代码，返回值就 xx, yy = blahblah()
         # 写好了叫我来画图
-
 
         expander_2 = st.expander("Portfolio Management Outcomes:")
         expander_2.write(
@@ -196,17 +206,27 @@ def main():
             TBC. See your Portfolio Managements Here(Check if it's clearred after invokes)
             """
         )
-                
+
+        # 展示结果
+        expander_2.write(pf_ret)
+        expander_2.write(ppt_ret)
 
     # sample usage: render the plotly plots: candlestick chart
     # st_candlestichart("GOOG")
 
+
 def portfolio_management(stock_selection,
                          risk_selection,
                          datestart_selection,
-                         daterange_selection):
+                         daterange_selection,
+                         dict_predictions):
     # _________________________________________________________________ #
     # analyzes data
+    pf = portfolio.PortfolioManagement(start=datestart_selection,
+                                       equities=stock_selection,
+                                       preference=risk_selection,
+                                       period=daterange_selection)
+    pf_ret = pf.Optimize(predicted=dict_predictions)
 
     # _________________________________________________________________ #
     # render website elements
@@ -222,8 +242,140 @@ def portfolio_management(stock_selection,
     info2.empty()
     info3.empty()
     info4.empty()
-    return
+    return pf_ret
 
+
+# portfolios: 元素为dataframe的列表，dataframe中包含期望的月均回报率return 变化率（风险）Volatility 以及用户输入的各个股票的投资权重
+# equities:股票名，至少两种 str
+# start:起始时间 str
+# period:持续时间 int
+# profits:输出。为一个列表，列表内元素为浮点数，代表自start开始持续period个交易日的每日盈利（根据Portfolio的策略购买股票 本金为1w＄ 持股时间为一天）
+
+def pastPaperTrading(period, start, equities, portfolios):
+    count_loop = period
+    datas = {}
+    start_now = start.strftime('%Y-%m-%d')
+    profits = []
+
+    df_profit = pd.DataFrame(columns=['Date', 'Daily Profit'])
+    df_forDrawing = pd.DataFrame(columns=['Date', 'Profit by Stock', 'Stock Code'])
+
+    count_profit = 0
+    count_drawing = 0
+
+    for equity in equities:
+        # 有点小问题 忘记+s
+        file_relative = equity + ".csv"
+        result_csv = load_csv(file_relative)
+        # result_csv = pd.read_csv(file_relative)
+        result_csv = result_csv.drop(["Open", "High", "Low" , "Close" , "Volume"], axis=1)
+        datas[equity] = result_csv
+
+    time_offset = 0
+
+    while count_loop > 0:
+        # 打印循环次数
+        # st.markdown("Loop: ")
+        # st.markdown(count_loop)
+        is_first = True
+        destination = []
+        for equity in equities:
+            if is_first:
+                df = datas[equity]
+                newdata = pd.DataFrame(columns=None);
+                count = 0
+                record = 0
+                for i in df["Date"]:
+                    if i == start_now:
+                        break
+                    elif i == "2019-01-02":
+                        record = count
+                        count += 1
+                    else:
+                        count += 1
+                destination.append(count)
+                # +2是因为要计算利润 引入第二天的数据
+                insert = df[record:count + time_offset + 2]
+                df_new = newdata.append(insert)
+
+                # 以股票名字重命名
+                df_new.rename(columns={"Adj Close": equity}, inplace=True)
+                is_first = False
+
+            else:
+                df_copy = datas[equity]
+                newdata_copy = pd.DataFrame(columns=None);
+                count = 0
+                record = 0
+
+                for i in df_copy["Date"]:
+                    if i == start_now:
+                        # st.markdown("Match!")
+                        break
+                    elif i == "2019-01-02":
+                        record = count
+                        count += 1
+                    else:
+
+                        count += 1
+                destination.append(count)
+                insert = df_copy[record:count + time_offset + 2]
+                df_new_copy = newdata_copy.append(insert)
+
+                # 删除预测列
+                df_new_copy = df_new_copy.drop(["Date"], axis=1)
+                df_new_copy.rename(columns={"Adj Close": equity}, inplace=True)
+
+                # 将新的股票列添加进来
+                columns = df_new.columns.tolist()
+                columns.insert(-1, equity)
+                df_new = df_new.reindex(columns=columns)
+                df_new[equity] = df_new_copy
+
+        today_price = {}
+        tomorrow_price = {}
+        destination_count = 0
+
+        dates = []
+        # 生成日期列表
+        date_list = df_new.reset_index()['Date']
+        time.sleep(15)
+        # date = date_list[destination[destination_count] - record + time_offset]
+        date = date_list[count - record + time_offset]
+
+        dates.append(date)
+
+        for equity in equities:
+
+            today = df_new[equity][destination[destination_count]+time_offset]
+            tomorrow = df_new[equity][destination[destination_count] +time_offset + 1]
+            today_price[equity] = today
+            tomorrow_price[equity] = tomorrow
+            destination_count += 1
+
+        profit = 0
+        priciple = 10000
+
+        for equity in equities:
+            i = equity+"weight"
+            profit_for_equity = priciple * portfolios[time_offset][i] * (float(tomorrow_price[equity]) - float(today_price[equity]))
+            profit += profit_for_equity
+
+            # 按日期 具体股票种类及该股票当日盈利为单位新建dataframe行
+            df_forDrawing.loc[count_drawing] = [date, profit_for_equity, equity]
+            count_drawing += 1
+
+        df_profit.loc[count_profit] = [date, profit]
+        count_profit += 1
+
+        # profits.append(profit)
+        df_tuple = (df_profit, df_forDrawing)
+
+        time_offset += 1
+        count_loop -= 1
+    # 打印完成记录
+    # st.markdown("Done!")
+    return df_tuple
 
 # ______________________________________________________________________________________________________________________
 # chart render support
@@ -233,42 +385,42 @@ def prediction_candlestichart(df_predictions, stock_selection):
         for stockCode in stock_selection:
             df = df_predictions[stockCode]
 
-            trace1 = go.Scatter(x = pd.to_datetime(df["Date"]),
-                            y = df["Adj Close"],
-                            mode = "lines+markers",
-                            marker = dict(color = "rgba(245, 210, 40, 0.8)"),
-                            name = "Actual Adj Close")
+            trace1 = go.Scatter(x=pd.to_datetime(df["Date"]),
+                                y=df["Adj Close"],
+                                mode="lines+markers",
+                                marker=dict(color="rgba(245, 210, 40, 0.8)"),
+                                name="Actual Adj Close")
 
-            trace2 = go.Scatter(x = pd.to_datetime(df["Date"]),
-                            y = df["Predicted_Adj_Close"],
-                            mode = "lines+markers",
-                            marker = dict(color = "rgba(40, 115, 240, 0.8)"),
-                            name = "Predicted Adj Close")
+            trace2 = go.Scatter(x=pd.to_datetime(df["Date"]),
+                                y=df["Predicted_Adj_Close"],
+                                mode="lines+markers",
+                                marker=dict(color="rgba(40, 115, 240, 0.8)"),
+                                name="Predicted Adj Close")
 
             trace3 = go.Candlestick(
-                    x = pd.to_datetime(df["Date"]),
-                    open = df["Open"],
-                    high = df["High"],
-                    low = df["Low"],
-                    close = df["Close"],
-                    increasing_line_color = "green",
-                    decreasing_line_color = "red",
-                    name = "Stock Price",
-                ),
+                x=pd.to_datetime(df["Date"]),
+                open=df["Open"],
+                high=df["High"],
+                low=df["Low"],
+                close=df["Close"],
+                increasing_line_color="green",
+                decreasing_line_color="red",
+                name="Stock Price",
+            ),
 
             fig = go.Figure(
-                data = trace3,
-                layout = dict(
-                title = "{} Stock Price in Candlestick Chart".format(stockCode),
-                xaxis = dict(title = "Date"),
-                yaxis = dict(title = "Price in USD")
+                data=trace3,
+                layout=dict(
+                    title="{} Stock Price in Candlestick Chart".format(stockCode),
+                    xaxis=dict(title="Date"),
+                    yaxis=dict(title="Price in USD")
                 )
             )
 
             fig.add_trace(trace1)
             fig.add_trace(trace2)
 
-            st.plotly_chart(fig, use_container_width = True)
+            st.plotly_chart(fig, use_container_width=True)
 
     return
 
@@ -285,6 +437,7 @@ def date_ValidCheck(datestart_selection: datetime.date,
         return False
     else:
         return True
+
 
 # ______________________________________________________________________________________________________________________
 # file resource supports
@@ -333,32 +486,32 @@ def download_file(fileName):
             with urllib.request.urlopen(EXTERNAL_DEPENDENCIES[fileName]["url"]) as response:
                 length = int(response.info()["Content-Length"])
                 counter = 0.0
-                MEGABYTES = 2.0 ** 20.0             # 2 ^ 20
-                
+                MEGABYTES = 2.0 ** 20.0  # 2 ^ 20
+
                 while True:
-                    data = response.read(8192)      # Max Byte-Array Buffer Read at one time
+                    data = response.read(8192)  # Max Byte-Array Buffer Read at one time
                     if not data:
-                        break                       # Load Compelete
+                        break  # Load Compelete
                     counter += len(data)
                     output.write(data)
 
                     # operate animation by overwriting components
-                    weights_warning.warning("Downloading %s...(%6.2f/%6.2f MB)" % 
-                        (fileName, counter / MEGABYTES, length / MEGABYTES))
+                    weights_warning.warning("Downloading %s...(%6.2f/%6.2f MB)" %
+                                            (fileName, counter / MEGABYTES, length / MEGABYTES))
                     progress_bar.progress(min(counter / length, 1.0))
 
     # clear all components after downloading
     finally:
         if weights_warning is not None:
             weights_warning.empty()
-        
+
         if progress_bar is not None:
             progress_bar.empty()
 
     return
 
 
-@st.experimental_singleton(show_spinner=False)      # experimental feature of function decorator to store singleton objects.
+@st.experimental_singleton(show_spinner=False)  # experimental feature of function decorator to store singleton objects.
 def load_file_content_as_string(path):
     """
     Load file content as strings.
@@ -366,6 +519,7 @@ def load_file_content_as_string(path):
     repo_url = "https://raw.githubusercontent.com/Ch-i-Yu/Simple-Face-Mask-Detector/main" + "/" + path
     response = urllib.request.urlopen(repo_url)
     return response.read().decode("utf-8")
+
 
 # ______________________________________________________________________________________________________________________
 # analysis support
@@ -375,7 +529,7 @@ def predict_stockPrice(stock_selection: str,
     # initialize return values
     df_predictions = {}
     dict_predictions = {}
-    
+
     for stockCode in stock_selection:
         df = load_csv(stockCode + ".csv")
         del df["Volume"]
@@ -385,27 +539,27 @@ def predict_stockPrice(stock_selection: str,
         datestart = datestart_selection.strftime(r"%Y-%m-%d")
 
         date_index_base = df[df["Date"].isin([datestart])].index.values[0]
-        df_base = df[(date_index_base - (daterange_selection - 1)) : (date_index_base + 1)]
+        df_base = df[(date_index_base - (daterange_selection - 1)): (date_index_base + 1)]
         list_predictions = []
 
         for i in range(daterange_selection):
             index_prev = date_index_base - (daterange_selection - 1) + i
             index_post = date_index_base + 1 + i
-            timestamp = np.array(df["Adj Close"][index_prev : index_post]).reshape(daterange_selection, 1)
+            timestamp = np.array(df["Adj Close"][index_prev: index_post]).reshape(daterange_selection, 1)
 
             # Apply Feature Scaling to Test Data
-            scaler = MinMaxScaler(feature_range = (0, 1))
+            scaler = MinMaxScaler(feature_range=(0, 1))
             timestamp = np.reshape(timestamp, (-1, 1))
             timestamp = scaler.fit_transform(timestamp)
             timestamp = np.reshape(timestamp, (-1, daterange_selection))
-            
+
             # Reshape Outputs
             pred = model.predict(timestamp)
             pred = scaler.inverse_transform(pred).tolist()
             list_predictions.append(pred[0][0])
 
         dict_predictions[stockCode] = list_predictions
-        df_predictions[stockCode] = df_base.assign(Predicted_Adj_Close = list_predictions)
+        df_predictions[stockCode] = df_base.assign(Predicted_Adj_Close=list_predictions)
 
     return df_predictions, dict_predictions
 
@@ -527,7 +681,6 @@ EXTERNAL_DEPENDENCIES = {
         "directory": "Helper-Resources"
     },
 }
-
 
 if __name__ == "__main__":
     main()
