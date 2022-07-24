@@ -1,12 +1,22 @@
+# -*- coding: utf-8 -*-
+
+# @Date:        2022/07/23
+# @Author:      Ashley-Willkes
+# @Last Edited: 2022/07/23 11:17
+
 import numpy as np
 import pandas as pd
 # from pandas_datareader import data
 #import matplotlib.pyplot as plt
 
 
+
 class PortfolioManagement:
-    def _init_(self):
-        self.args = None
+    def __init__(self,equities, preference, start, period):
+        self.equities = equities
+        self.preference = preference
+        self.start = start
+        self.period = period
 
     # equities:股票名，至少两种 str
     # preference:用户风险偏好,只有两种 str
@@ -15,55 +25,64 @@ class PortfolioManagement:
 
     # 返回值为一个长度为period的列表。列表中顺序记录了每一天的优化组合投资策略。
     # 列表中每个元素包含：期望的月均回报率return 变化率（风险）Volatility 以及用户输入的各个股票的投资权重
-    def Optimize(self, equities, preference, start, period):
+
+    # predicted输入格式：一个字典。键为AAPL GOOG等字符串 List的长度和period相同。
+    def Optimize(self, predicted):
         datas = {}
-        count_out = period
+        count_out = self.period
 
         ret_portfolios = []  #返回值
-        for equity in equities:
-            file_relative = equity+".csv"
-            result_csv = pd.read_csv(file_relative, header=None)
+        for equity in self.equities:
+            file_relative = "./Stock-Dataset/" + equity +".csv"
+            result_csv = pd.read_csv(file_relative)
+            result_csv = result_csv.drop(["Open", "High", "Low" , "Close" , "Volume"], axis=1)
             datas[equity] = result_csv
 
         time_offset = 0
         while count_out > 0:
             is_first = True
-            for equity in equities:
+            for equity in self.equities:
                 if is_first:
                     df = datas[equity]
                     newdata = pd.DataFrame(columns=None);
                     count = 0
-                    for i in df[0]:
-                        if i == start:
+                    record = 0
+                    for i in df["Date"]:
+                        if i == self.start:
                             break
+                        elif i == "2019-01-02":
+                            record = count
+                            count += 1
                         else:
                             count += 1
-                    insert = df[0:count + time_offset + 1]
+                    insert = df[record:count + time_offset + 1]
                     df_new = newdata.append(insert)
 
-                    #把当天的预测值赋给df，然后删除预测列
-                    df_new.loc[count+time_offset, 1] = df_new.loc[count+time_offset, 2]
-                    df_new = df_new.drop([2], axis=1)
-                    df_new.rename(columns={1: equity}, inplace=True)
+                    #把当天的预测值赋给df
+                    df_new.loc[count + time_offset, "Adj Close"] = predicted[equity][time_offset]
+                    df_new.rename(columns={"Adj Close": equity}, inplace=True)
                     is_first = False
 
                 else:
                     df_copy = datas[equity]
                     newdata_copy = pd.DataFrame(columns=None);
                     count = 0
-                    for i in df_copy[0]:
-                        if i == start:
+                    record = 0
+                    for i in df_copy["Date"]:
+                        if i == self.start:
                             break
+                        elif i == "2019-01-02":
+                            record = count
+                            count += 1
                         else:
                             count += 1
-                    insert = df_copy[0:count + time_offset + 1]
+                    insert = df_copy[record:count + time_offset + 1]
                     df_new_copy = newdata_copy.append(insert)
 
                     # 把当天的预测值赋给df，然后删除预测列
-                    df_new_copy.loc[count + time_offset, 1] = df_new_copy.loc[count + time_offset, 2]
-                    df_new_copy = df_new_copy.drop([2], axis=1)
-                    df_new_copy = df_new_copy.drop([0], axis=1)
-                    df_new_copy.rename(columns={1: equity}, inplace=True)
+                    df_new_copy.loc[count + time_offset, "Adj Close"] = predicted[equity][time_offset]
+                    df_new_copy = df_new_copy.drop(["Date"], axis=1)
+                    df_new_copy.rename(columns={"Adj Close": equity}, inplace=True)
 
                     #将新的股票列添加进来
                     columns = df_new.columns.tolist()
@@ -71,12 +90,12 @@ class PortfolioManagement:
                     df_new = df_new.reindex(columns=columns)
                     df_new[equity] = df_new_copy
 
-            df_new = df_new.drop([0])
+           # df_new = df_new.drop([0])
             symbols = []
-            for equity in equities:
+            for equity in self.equities:
                 symbols.append(equity)
             df_new[symbols] = df_new[symbols].astype(float)
-            df_new.rename(columns={0: 'Date'}, inplace=True)
+            # df_new.rename(columns={0: 'Date'}, inplace=True)
             df_new['Date']=pd.to_datetime(df_new['Date'])
             df_new.set_index(['Date'], inplace=True)    #用Date作index横坐标
 
@@ -118,7 +137,7 @@ class PortfolioManagement:
             # portfolios.plot.scatter(x='Volatility', y='Returns', marker='o', s=10, alpha=0.3, grid=True,
             #                         figsize=[10, 10])
 
-            if preference == 'Minimun Volatility':
+            if self.preference == 'Minimun Volatility':
                 min_vol_port = portfolios.iloc[portfolios['Volatility'].idxmin()]
                 ret_portfolios.append(min_vol_port)
             else:
@@ -130,7 +149,3 @@ class PortfolioManagement:
             time_offset += 1
 
         return ret_portfolios
-
-
-pf = PortfolioManagement()
-pdd = pf.Optimize()
