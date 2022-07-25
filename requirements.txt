@@ -7,4 +7,5 @@ pip==22.1.2
 plotly==5.9.0
 scikit-learn==1.1.1
 scipy==1.8.1
+streamlit==1.11.0
 tensorflow==2.9.1
