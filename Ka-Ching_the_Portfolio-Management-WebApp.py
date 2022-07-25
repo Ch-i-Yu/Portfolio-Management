@@ -22,12 +22,17 @@ import urllib
 import time
 import datetime
 
+from warnings import simplefilter
+simplefilter(action = "ignore", category = FutureWarning)
+simplefilter(action = "ignore", category = DeprecationWarning)
+
 import pandas as pd
 import numpy as np
 
 from keras import models
 
 from plotly import graph_objs as go
+from plotly import express as px
 from plotly.figure_factory import create_candlestick
 from plotly.graph_objects import Line, Marker
 
@@ -134,7 +139,7 @@ def main():
     stock_selection = st.sidebar.multiselect(
         "Select Stocks to Analysis",
         options=stock_option,
-        default=stock_option[0:5],
+        default=stock_option[0:3],
         disabled=input_session_state
     )
     if (len(stock_selection)) == 0:
@@ -189,30 +194,18 @@ def main():
                                   datestart_selection = datestart_selection,
                                   daterange_selection = daterange_selection,
                                   dict_predictions=dict_predictions)
-        # print(pf_ret)
+
         # PastPaperTrading的返回值
-        ppt_ret = pastPaperTrading(period=daterange_selection,
+        df_profit, df_forDrawing = pastPaperTrading(period=daterange_selection,
                                    start=datestart_selection,
                                    equities=stock_selection,
                                    portfolios=pf_ret)
-        # print(ppt_ret)
 
-        # 在这里调用代码，返回值就 xx, yy = blahblah()
-        # 写好了叫我来画图
+        portfolio_barchart(pf_ret, df_profit, df_forDrawing)
 
-        expander_2 = st.expander("Portfolio Management Outcomes:")
-        expander_2.write(
-            """
-            TBC. See your Portfolio Managements Here(Check if it's clearred after invokes)
-            """
-        )
-
-        # 展示结果
-        expander_2.write(pf_ret)
-        expander_2.write(ppt_ret)
-
-    # sample usage: render the plotly plots: candlestick chart
-    # st_candlestichart("GOOG")
+        # ______________________________________________________________ #
+        # 3. complete and draw celebratory balloons
+        st.balloons()
 
 
 def portfolio_management(stock_selection,
@@ -227,21 +220,6 @@ def portfolio_management(stock_selection,
                                        preference=risk_selection,
                                        period=daterange_selection)
     pf_ret = pf.Optimize(predicted=dict_predictions)
-
-    # _________________________________________________________________ #
-    # render website elements
-
-    text = st.markdown("The Invoked Function is Running for 15 seconds.")
-    info1 = st.markdown(stock_selection)
-    info2 = st.markdown(risk_selection)
-    info3 = st.markdown(datestart_selection)
-    info4 = st.markdown(daterange_selection)
-    time.sleep(15)
-    text.empty()
-    info1.empty()
-    info2.empty()
-    info3.empty()
-    info4.empty()
     return pf_ret
 
 
@@ -385,11 +363,11 @@ def prediction_candlestichart(df_predictions, stock_selection):
         for stockCode in stock_selection:
             df = df_predictions[stockCode]
 
-            trace1 = go.Scatter(x=pd.to_datetime(df["Date"]),
-                                y=df["Adj Close"],
-                                mode="lines+markers",
-                                marker=dict(color="rgba(245, 210, 40, 0.8)"),
-                                name="Actual Adj Close")
+            trace1 = go.Scatter(x = pd.to_datetime(df["Date"]),
+                                y = df["Adj Close"],
+                                mode = "lines+markers",
+                                marker = dict(color="rgba(245, 210, 40, 0.8)"),
+                                name = "Actual Adj Close")
 
             trace2 = go.Scatter(x=pd.to_datetime(df["Date"]),
                                 y=df["Predicted_Adj_Close"],
@@ -424,6 +402,29 @@ def prediction_candlestichart(df_predictions, stock_selection):
 
     return
 
+
+def portfolio_barchart(pf_ret, df_profit, df_forDrawing):
+    with st.expander("Analyzed Portfolio Outcomes:"):
+        col1, col2 = st.columns(2)
+        col1.metric("Returns", pf_ret[-1]["Returns"])
+        col2.metric("Volatility", pf_ret[-1]["Volatility"])
+
+        fig = px.bar(df_forDrawing,
+                    x = "Date",
+                    y = "Profit by Stock",
+                    color = "Stock Code",
+                    title = "Portfolio Outcomes")
+
+        trace = go.Scatter(
+            x = df_profit["Date"],
+            y = df_profit["Daily Profit"],
+            mode = "lines+markers",
+            marker = dict(color="rgba(255, 255, 102, 0.8)"),
+            name = "Daily Profit"
+        )
+
+        fig.add_trace(trace)
+        st.plotly_chart(fig, use_container_width=True)
 
 # ______________________________________________________________________________________________________________________
 # validity check supports
@@ -540,6 +541,7 @@ def predict_stockPrice(stock_selection: str,
 
         date_index_base = df[df["Date"].isin([datestart])].index.values[0]
         df_base = df[(date_index_base - (daterange_selection - 1)): (date_index_base + 1)]
+        df_outcome = df[(date_index_base) : (date_index_base + daterange_selection)]
         list_predictions = []
 
         for i in range(daterange_selection):
@@ -559,7 +561,7 @@ def predict_stockPrice(stock_selection: str,
             list_predictions.append(pred[0][0])
 
         dict_predictions[stockCode] = list_predictions
-        df_predictions[stockCode] = df_base.assign(Predicted_Adj_Close=list_predictions)
+        df_predictions[stockCode] = df_outcome.assign(Predicted_Adj_Close = list_predictions)
 
     return df_predictions, dict_predictions
 
