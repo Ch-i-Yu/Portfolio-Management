@@ -171,10 +171,10 @@ def main():
 
     daterange_selection = st.sidebar.slider(
         "Select a Date Range(by Days) to Perform Portfolio Management",
-        min_value=7,
-        value=14,
-        step=7,
-        max_value=35
+        min_value = 7,
+        value = 7,
+        step = 7,
+        max_value = 35
     )
 
     # invoke service
@@ -215,10 +215,10 @@ def portfolio_management(stock_selection,
                          dict_predictions):
     # _________________________________________________________________ #
     # analyzes data
-    pf = portfolio.PortfolioManagement(start=datestart_selection,
-                                       equities=stock_selection,
-                                       preference=risk_selection,
-                                       period=daterange_selection)
+    pf = portfolio.PortfolioManagement(start = datestart_selection,
+                                       equities = stock_selection,
+                                       preference = risk_selection,
+                                       period = daterange_selection)
     pf_ret = pf.Optimize(predicted=dict_predictions)
     return pf_ret
 
@@ -540,20 +540,19 @@ def predict_stockPrice(stock_selection: str,
         datestart = datestart_selection.strftime(r"%Y-%m-%d")
 
         date_index_base = df[df["Date"].isin([datestart])].index.values[0]
-        df_base = df[(date_index_base - (daterange_selection - 1)): (date_index_base + 1)]
         df_outcome = df[(date_index_base) : (date_index_base + daterange_selection)]
         list_predictions = []
 
         for i in range(daterange_selection):
-            index_prev = date_index_base - (daterange_selection - 1) + i
+            index_prev = date_index_base - (14 - 1) + i
             index_post = date_index_base + 1 + i
-            timestamp = np.array(df["Adj Close"][index_prev: index_post]).reshape(daterange_selection, 1)
+            timestamp = np.array(df["Adj Close"][index_prev: index_post])
 
             # Apply Feature Scaling to Test Data
             scaler = MinMaxScaler(feature_range=(0, 1))
             timestamp = np.reshape(timestamp, (-1, 1))
             timestamp = scaler.fit_transform(timestamp)
-            timestamp = np.reshape(timestamp, (-1, daterange_selection))
+            timestamp = np.reshape(timestamp, (-1, 14))
 
             # Reshape Outputs
             pred = model.predict(timestamp)
