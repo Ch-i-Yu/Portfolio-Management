@@ -55,7 +55,11 @@ class PortfolioManagement:
                             count += 1
                         else:
                             count += 1
-                    insert = df[record:count + time_offset + 1]
+                    # insert = df[record:count + time_offset + 1]
+                    left = count + time_offset - 27
+                    right = count + time_offset + 1
+                    insert = df[left :right]
+                    # insert = df[record:count + time_offset + 1]
                     df_new = newdata.append(insert)
 
                     #把当天的预测值赋给df
@@ -76,7 +80,8 @@ class PortfolioManagement:
                             count += 1
                         else:
                             count += 1
-                    insert = df_copy[record:count + time_offset + 1]
+                    insert = df_copy[count + time_offset -27:count + time_offset + 1]
+                    # insert = df_copy[record:count + time_offset + 1]
                     df_new_copy = newdata_copy.append(insert)
 
                     # 把当天的预测值赋给df，然后删除预测列
@@ -103,7 +108,8 @@ class PortfolioManagement:
             cov_matrix = df_new.pct_change().apply(lambda x: np.log(1+x)).cov()
             corr_matrix = df_new.pct_change().apply(lambda x: np.log(1 + x)).corr()
             ann_sd = df_new.pct_change().apply(lambda x: np.log(1 + x)).std().apply(lambda x: x * np.sqrt(250))
-            ind_er = df_new.resample('M').last().pct_change().mean()    #由于时间可能较短，用月均回报率代替年均回报率
+            # ind_er = df_new.resample('M').last().pct_change().mean()    #由于时间可能较短，用月均回报率代替年均回报率
+            ind_er = df_new.pct_change().mean()
             assets = pd.concat([ind_er, ann_sd],
                                axis=1)  # Creating a table for visualising returns and volatility of assets
             assets.columns = ['Returns', 'Volatility']
