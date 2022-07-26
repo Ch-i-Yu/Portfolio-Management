@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
-# @Date:        2022/07/25
+# @Date:        2022/07/26
 # @Author:      Ashley-Willkes
-# @Last Edited: 2022/07/25 21:16
+# @Last Edited: 2022/07/26 23:27
 
+
+from datetime import datetime
 import numpy as np
 import pandas as pd
 # from pandas_datareader import data
@@ -31,12 +33,13 @@ class PortfolioManagement:
         datas = {}
         count_out = self.period
         max_sharpe = 0
-        
-        ret_portfolios = []  #返回值
+
+
+        ret_portfolios = []  # 返回值
         for equity in self.equities:
-            file_relative = "./Stock-Datasets/" + equity +".csv"
+            file_relative = "./Stock-Datasets/" + equity + ".csv"
             result_csv = pd.read_csv(file_relative)
-            result_csv = result_csv.drop(["Open", "High", "Low" , "Close" , "Volume"], axis=1)
+            result_csv = result_csv.drop(["Open", "High", "Low", "Close", "Volume"], axis=1)
             datas[equity] = result_csv
 
         time_offset = 0
@@ -49,6 +52,8 @@ class PortfolioManagement:
                     count = 0
                     record = 0
                     for i in df["Date"]:
+                        i = datetime.strptime(i, '%Y-%m-%d')
+                        i = datetime.date(i)
                         if i == self.start:
                             break
                         elif i == "2019-01-02":
@@ -57,13 +62,15 @@ class PortfolioManagement:
                         else:
                             count += 1
                     # insert = df[record:count + time_offset + 1]
+
                     left = count + time_offset - 27
                     right = count + time_offset + 1
-                    insert = df[left :right]
+                    insert = df[left:right]
                     # insert = df[record:count + time_offset + 1]
                     df_new = newdata.append(insert)
 
-                    #把当天的预测值赋给df
+
+                    # 把当天的预测值赋给df
                     df_new.loc[count + time_offset, "Adj Close"] = predicted[equity][time_offset]
                     df_new.rename(columns={"Adj Close": equity}, inplace=True)
                     is_first = False
@@ -74,6 +81,8 @@ class PortfolioManagement:
                     count = 0
                     record = 0
                     for i in df_copy["Date"]:
+                        i = datetime.strptime(i, '%Y-%m-%d')
+                        i = datetime.date(i)
                         if i == self.start:
                             break
                         elif i == "2019-01-02":
@@ -81,7 +90,7 @@ class PortfolioManagement:
                             count += 1
                         else:
                             count += 1
-                    insert = df_copy[count + time_offset -27:count + time_offset + 1]
+                    insert = df_copy[count + time_offset - 27:count + time_offset + 1]
                     # insert = df_copy[record:count + time_offset + 1]
                     df_new_copy = newdata_copy.append(insert)
 
@@ -90,23 +99,23 @@ class PortfolioManagement:
                     df_new_copy = df_new_copy.drop(["Date"], axis=1)
                     df_new_copy.rename(columns={"Adj Close": equity}, inplace=True)
 
-                    #将新的股票列添加进来
+                    # 将新的股票列添加进来
                     columns = df_new.columns.tolist()
                     columns.insert(-1, equity)
                     df_new = df_new.reindex(columns=columns)
                     df_new[equity] = df_new_copy
 
-           # df_new = df_new.drop([0])
+            # df_new = df_new.drop([0])
             symbols = []
             for equity in self.equities:
                 symbols.append(equity)
             df_new[symbols] = df_new[symbols].astype(float)
             # df_new.rename(columns={0: 'Date'}, inplace=True)
-            df_new['Date']=pd.to_datetime(df_new['Date'])
-            df_new.set_index(['Date'], inplace=True)    #用Date作index横坐标
+            df_new['Date'] = pd.to_datetime(df_new['Date'])
+            df_new.set_index(['Date'], inplace=True)  # 用Date作index横坐标
 
-            #计算协方差、相关系数矩阵、Annual Standard Deviation
-            cov_matrix = df_new.pct_change().apply(lambda x: np.log(1+x)).cov()
+            # 计算协方差、相关系数矩阵、Annual Standard Deviation
+            cov_matrix = df_new.pct_change().apply(lambda x: np.log(1 + x)).cov()
             corr_matrix = df_new.pct_change().apply(lambda x: np.log(1 + x)).corr()
             ann_sd = df_new.pct_change().apply(lambda x: np.log(1 + x)).std().apply(lambda x: x * np.sqrt(250))
             # ind_er = df_new.resample('M').last().pct_change().mean()    #由于时间可能较短，用月均回报率代替年均回报率
@@ -115,7 +124,7 @@ class PortfolioManagement:
                                axis=1)  # Creating a table for visualising returns and volatility of assets
             assets.columns = ['Returns', 'Volatility']
 
-            #求权重，蒙特卡洛抽样
+            # 求权重，蒙特卡洛抽样
             p_ret = []  # Define an empty array for portfolio returns
             p_vol = []  # Define an empty array for portfolio volatility
             p_weights = []  # Define an empty array for asset weights
@@ -138,7 +147,7 @@ class PortfolioManagement:
             for counter, symbol in enumerate(df_new.columns.tolist()):
                 # print(counter, symbol)
                 data[symbol + 'weight'] = [w[counter] for w in p_weights]
-            portfolios = pd.DataFrame(data) #得到蒙特卡洛抽样的组合投资策略
+            portfolios = pd.DataFrame(data)  # 得到蒙特卡洛抽样的组合投资策略
 
             # Optional: Plot efficient frontier
             # portfolios.plot.scatter(x='Volatility', y='Returns', marker='o', s=10, alpha=0.3, grid=True,
@@ -147,20 +156,19 @@ class PortfolioManagement:
             if self.preference == 'Minimun Volatility':
                 rf = 0.0001  # risk factor
                 min_vol_port = portfolios.iloc[portfolios['Volatility'].idxmin()]
-                sharpe_ratio = ((min_vol_port['Returns']-rf)/min_vol_port['Volatility'])*100
+                sharpe_ratio = ((min_vol_port['Returns'] - rf) / min_vol_port['Volatility']) * 100
                 # print(sharpe_ratio)
-                if(sharpe_ratio > max_sharpe):
+                if (sharpe_ratio > max_sharpe):
                     max_sharpe = sharpe_ratio
                 ret_portfolios.append(min_vol_port)
             else:
                 rf = 0.0001  # risk factor
-                optimal_risky_port = portfolios.iloc[((portfolios['Returns']-rf)/portfolios['Volatility']).idxmax()]
-                sharpe_ratio = ((optimal_risky_port['Returns']-rf)/optimal_risky_port['Volatility'])*100
+                optimal_risky_port = portfolios.iloc[((portfolios['Returns'] - rf) / portfolios['Volatility']).idxmax()]
+                sharpe_ratio = ((optimal_risky_port['Returns'] - rf) / optimal_risky_port['Volatility']) * 100
                 # print(sharpe_ratio)
-                if(sharpe_ratio > max_sharpe):
+                if (sharpe_ratio > max_sharpe):
                     max_sharpe = sharpe_ratio
                 ret_portfolios.append(optimal_risky_port)
-
             count_out -= 1
             time_offset += 1
 
