@@ -76,28 +76,53 @@ def main():
     )
 
     # set page about / userguide info
-    tab_about, tab_plotlytricks, tab_userguide = st.tabs(["About", "Plotly Tricks", "User Guide"])
+    tab_about, tab_overview, tab_userguide, = st.tabs(["About Us", "Overview", "User Guide"])
     with tab_about:
         st.markdown(
             """
-            About Content: Hot Work in Progress!
-            """
-        )
-    with tab_plotlytricks:
-        st.markdown(
-            """
-            - Double Click on legends to isolate a trace;
-            - Single Click on legends to remove a trace;
-            - Repeat your clicks to undo your operations;
+            ### What is `Ka-Ching`?
+            `Ka-Ching` is a slang word indicating the ringing of the bell of a cash register being opened, often as way of indicating profitability:money_with_wings:.
+            
+            ### What does `Ka-Ching` do for me?
+            `Ka-Ching` uses AI(LSTM Network) to build your portfolios based on your preference and visualize them with interpretable `Plotly` plots.
+
+            *Don't forget to star & fork our website if you like it*:sparkling_heart:
+
             """
         )
     with tab_userguide:
         st.markdown(
             """
+            **For Plotly Charts**:
+            - Double Click on legends to isolate a trace;
+            - Single Click on legends to remove a trace;
+            - Repeat your clicks to undo your operations;
+
+
+            **For Our Portfolio Management:**
             1. Config your portfolio in the **`sidebar`**;
             2. Press the **`button`** below in the **`sidebar`** to start;
 
             Please double check the validity of your portfolio configurations if the **`button`** is disabled.
+            """
+        )
+    with tab_overview:
+        st.markdown(
+            """
+            ### Stock Price Prediction:
+            Our real-time predicted `Future Stock Prices` are `87%` reliable according to LSTM(Long Short-Term Memory Network) with a `lookback` of 14 days.
+            """
+        )
+        st.markdown(
+            """
+            ### MPT Portfolio Management
+            Ensure a flexibility in portfolios for you with  `Modern Portfolio Theory` aka `Mean-Variance Analysis` and implemented with `Monte Carlo Method`.
+            """
+        )
+        st.markdown(
+            """
+            ### Past Paper Trading
+            `Terrific Trading Simulation` on historical stock data with Full options to configure your portfolio(Stocks, Dates, Ranges and etc.)!
             """
         )
 
