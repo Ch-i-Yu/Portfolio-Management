@@ -171,5 +171,9 @@ class PortfolioManagement:
                 ret_portfolios.append(optimal_risky_port)
             count_out -= 1
             time_offset += 1
+            
+            ans = []
+            ans.append(ret_portfolios)
+            ans.append(max_sharpe)
 
-        return ret_portfolios, max_sharpe
+        return ans
