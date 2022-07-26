@@ -30,7 +30,8 @@ class PortfolioManagement:
     def Optimize(self, predicted):
         datas = {}
         count_out = self.period
-
+        max_sharpe = 0
+        
         ret_portfolios = []  #返回值
         for equity in self.equities:
             file_relative = "./Stock-Datasets/" + equity +".csv"
@@ -144,14 +145,23 @@ class PortfolioManagement:
             #                         figsize=[10, 10])
 
             if self.preference == 'Minimun Volatility':
+                rf = 0.0001  # risk factor
                 min_vol_port = portfolios.iloc[portfolios['Volatility'].idxmin()]
+                sharpe_ratio = ((min_vol_port['Returns']-rf)/min_vol_port['Volatility'])*100
+                # print(sharpe_ratio)
+                if(sharpe_ratio > max_sharpe):
+                    max_sharpe = sharpe_ratio
                 ret_portfolios.append(min_vol_port)
             else:
-                rf = 0.01  # risk factor
+                rf = 0.0001  # risk factor
                 optimal_risky_port = portfolios.iloc[((portfolios['Returns']-rf)/portfolios['Volatility']).idxmax()]
+                sharpe_ratio = ((optimal_risky_port['Returns']-rf)/optimal_risky_port['Volatility'])*100
+                # print(sharpe_ratio)
+                if(sharpe_ratio > max_sharpe):
+                    max_sharpe = sharpe_ratio
                 ret_portfolios.append(optimal_risky_port)
 
             count_out -= 1
             time_offset += 1
 
-        return ret_portfolios
+        return ret_portfolios, max_sharpe
