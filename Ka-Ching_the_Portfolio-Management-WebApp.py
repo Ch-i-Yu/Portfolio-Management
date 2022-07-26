@@ -252,8 +252,6 @@ def portfolio_management(stock_selection,
                                        preference = risk_selection,
                                        period = daterange_selection)
     ans = pf.Optimize(predicted=dict_predictions)
-    st.markdown("hey!")
-    st.markdown(sharpe_ratio)
     return ans
 
 
