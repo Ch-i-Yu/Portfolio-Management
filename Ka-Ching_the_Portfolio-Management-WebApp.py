@@ -220,7 +220,7 @@ def main():
         # 2. analyze portfolio management:
 
         # Portfolio的返回值
-        pf_ret = portfolio_management(stock_selection=stock_selection , risk_selection= risk_selection,
+        pf_ret ,sharpe_ratio= portfolio_management(stock_selection=stock_selection , risk_selection= risk_selection,
                                   datestart_selection = datestart_selection,
                                   daterange_selection = daterange_selection,
                                   dict_predictions=dict_predictions)
@@ -231,7 +231,7 @@ def main():
                                    equities=stock_selection,
                                    portfolios=pf_ret)
 
-        portfolio_barchart(pf_ret, df_profit, df_forDrawing)
+        portfolio_barchart(pf_ret, df_profit, df_forDrawing ,sharpe_ratio)
 
         # ______________________________________________________________ #
         # 3. complete and draw celebratory balloons
@@ -249,8 +249,8 @@ def portfolio_management(stock_selection,
                                        equities = stock_selection,
                                        preference = risk_selection,
                                        period = daterange_selection)
-    pf_ret = pf.Optimize(predicted=dict_predictions)
-    return pf_ret
+    pf_ret ,sharpe_ratio= pf.Optimize(predicted=dict_predictions)
+    return pf_ret, sharpe_ratio
 
 
 # portfolios: 元素为dataframe的列表，dataframe中包含期望的月均回报率return 变化率（风险）Volatility 以及用户输入的各个股票的投资权重
@@ -433,12 +433,21 @@ def prediction_candlestichart(df_predictions, stock_selection):
     return
 
 
-def portfolio_barchart(pf_ret, df_profit, df_forDrawing):
+def portfolio_barchart(pf_ret, df_profit, df_forDrawing, sharpe_ratio):
     with st.expander("Analyzed Portfolio Outcomes:"):
-        col1, col2 = st.columns(2)
-        col1.metric("Returns", pf_ret[-1]["Returns"])
-        col2.metric("Volatility", pf_ret[-1]["Volatility"])
+        col1, col2 ,col3= st.columns(3)
+        sum = 0
+        count = 0
+        for i in pf_ret:
+            sum += i["Returns"]
+            count += 1
+        sum = sum / count
+#       col1.metric("Returns", pf_ret[-1]["Returns"])
 
+        col1.metric("Returns", sum)
+        col2.metric("Volatility", pf_ret[-1]["Volatility"])
+        col3.metric("Sharpe Ratio",sharpe_ratio)
+        
         fig = px.bar(df_forDrawing,
                     x = "Date",
                     y = "Profit by Stock",
