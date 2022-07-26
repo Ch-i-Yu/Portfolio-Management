@@ -109,7 +109,7 @@ def main():
     with tab_overview:
         st.markdown(
             """
-            ### Stock Price Prediction:
+            ### Stock Price Prediction
             Our real-time predicted `Future Stock Prices` are `87%` reliable according to LSTM(Long Short-Term Memory Network) with a `lookback` of 14 days.
             """
         )
