@@ -81,9 +81,11 @@ def main():
         st.markdown(
             """
             **What is `Ka-Ching`?**
+            
             `Ka-Ching` is a slang word indicating the ringing of the bell of a cash register being opened, often as way of indicating profitability:money_with_wings:.
             
             **What does `Ka-Ching` do for me?**
+            
             `Ka-Ching` uses AI(LSTM Network) to build your portfolios based on your preference and visualize them with interpretable `Plotly` plots.
 
             *Don't forget to star & fork our website if you like it*:sparkling_heart:
@@ -110,18 +112,21 @@ def main():
         st.markdown(
             """
             **Stock Price Prediction**
+            
             Our real-time predicted `Future Stock Prices` are `87%` reliable according to LSTM(Long Short-Term Memory Network) with a `lookback` of 14 days.
             """
         )
         st.markdown(
             """
             **MPT Portfolio Management**
+            
             Ensure a flexibility in portfolios for you with  `Modern Portfolio Theory` aka `Mean-Variance Analysis` and implemented with `Monte Carlo Method`.
             """
         )
         st.markdown(
             """
             **Past Paper Trading**
+            
             `Terrific Trading Simulation` on historical stock data with Full options to configure your portfolio(Stocks, Dates, Ranges and etc.)!
             """
         )
