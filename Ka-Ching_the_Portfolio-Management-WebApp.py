@@ -220,10 +220,12 @@ def main():
         # 2. analyze portfolio management:
 
         # Portfolio的返回值
-        pf_ret ,sharpe_ratio= portfolio_management(stock_selection=stock_selection , risk_selection= risk_selection,
+        ans = portfolio_management(stock_selection=stock_selection , risk_selection= risk_selection,
                                   datestart_selection = datestart_selection,
                                   daterange_selection = daterange_selection,
                                   dict_predictions=dict_predictions)
+        pf_ret = ans[0]
+        sharpe_ratio = ans[1]
 
         # PastPaperTrading的返回值
         df_profit, df_forDrawing = pastPaperTrading(period=daterange_selection,
@@ -249,10 +251,10 @@ def portfolio_management(stock_selection,
                                        equities = stock_selection,
                                        preference = risk_selection,
                                        period = daterange_selection)
-    pf_ret ,sharpe_ratio= pf.Optimize(predicted=dict_predictions)
+    ans = pf.Optimize(predicted=dict_predictions)
     st.markdown("hey!")
     st.markdown(sharpe_ratio)
-    return pf_ret, sharpe_ratio
+    return ans
 
 
 # portfolios: 元素为dataframe的列表，dataframe中包含期望的月均回报率return 变化率（风险）Volatility 以及用户输入的各个股票的投资权重
