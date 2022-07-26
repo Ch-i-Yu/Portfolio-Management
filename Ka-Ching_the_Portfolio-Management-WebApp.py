@@ -250,6 +250,8 @@ def portfolio_management(stock_selection,
                                        preference = risk_selection,
                                        period = daterange_selection)
     pf_ret ,sharpe_ratio= pf.Optimize(predicted=dict_predictions)
+    st.markdown("hey!")
+    st.markdown(sharpe_ratio)
     return pf_ret, sharpe_ratio
 
 
@@ -439,9 +441,8 @@ def portfolio_barchart(pf_ret, df_profit, df_forDrawing, sharpe_ratio):
         sum = 0
         count = 0
         for i in pf_ret:
-            sum += i["Returns"]
+            sum += abs(i["Returns"])
             count += 1
-        sum = sum / count
 #       col1.metric("Returns", pf_ret[-1]["Returns"])
 
         col1.metric("Returns", sum)
