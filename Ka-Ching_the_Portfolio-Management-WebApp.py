@@ -211,6 +211,8 @@ def main():
     if st.sidebar.button(
             "Click to Start Portfolio Management!",
             disabled=invoke_session_state):
+
+        WAIT_INFO = st.info("Busying Analyzing...Please Wait for several minutes!")
         # ______________________________________________________________ #
         # 1. predict stock prices:
         df_predictions, dict_predictions = predict_stockPrice(stock_selection, datestart_selection, daterange_selection)
@@ -227,6 +229,10 @@ def main():
         pf_ret = ans[0]
         sharpe_ratio = ans[1]
 
+        df_csv = pd.DataFrame()
+        for item in pf_ret:
+            df_csv = df_csv.join(item)
+
         # PastPaperTrading的返回值
         df_profit, df_forDrawing = pastPaperTrading(period=daterange_selection,
                                    start=datestart_selection,
@@ -238,6 +244,10 @@ def main():
         # ______________________________________________________________ #
         # 3. complete and draw celebratory balloons
         st.balloons()
+        WAIT_INFO.empty()
+        st.download_button(label = "Download your portfolio in weights!",
+                           data = df_csv.to_csv().encode("utf-8"),
+                           mime = "text/csv" )
 
 
 def portfolio_management(stock_selection,
@@ -445,9 +455,9 @@ def portfolio_barchart(pf_ret, df_profit, df_forDrawing, sharpe_ratio):
             count += 1
 #       col1.metric("Returns", pf_ret[-1]["Returns"])
 
-        col1.metric("Returns", sum)
-        col2.metric("Volatility", pf_ret[-1]["Volatility"])
-        col3.metric("Sharpe Ratio",sharpe_ratio)
+        col1.metric("Returns", "{:.2%}".format(sum))
+        col2.metric("Volatility", "{:.2%}".format(pf_ret[-1]["Volatility"]))
+        col3.metric("Sharpe Ratio", "{:.2%}".format(sharpe_ratio))
         
         fig = px.bar(df_forDrawing,
                     x = "Date",
