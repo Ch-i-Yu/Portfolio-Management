@@ -113,7 +113,7 @@ def main():
             """
             **Stock Price Prediction**
             
-            Our real-time predicted `Future Stock Prices` are `87%` reliable according to LSTM(Long Short-Term Memory Network) with a `lookback` of 14 days.
+            Based on formal data of stock market, LSTM (Long Short-Term Memory Network) with a lookback of 14 days could help predict future trends and thus yielding significant profit.
             """
         )
         st.markdown(
